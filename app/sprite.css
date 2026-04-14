@@ -1,6 +1,6 @@
 .flower {
   position: absolute;
-  background-image: url('/movingflower.png');
+  background-image: url('/MovingFlower.png');
   background-repeat: no-repeat;
   background-size: 200% 100%; /* sprite is 2 frames wide relative to the element */
   background-position: 0% 0%;

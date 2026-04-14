@@ -3,7 +3,7 @@ import { useRef, useState, useEffect } from "react";
 import React from 'react';
 import './sprite.css';
 import Typewriter from './typewriter';
-
+import { Analytics } from "@vercel/analytics/next"
 
 // pixelwalk.png: 16×32 frames, 4 cols × 4 rows
 const FRAME_W = 16;
@@ -72,46 +72,112 @@ const HOTSPOT_DEFS: HotspotDef[] = [
 ];
 
 // ─── Flowers ─────────────────────────────────────────────────────────────────
-// Positions defined in image-space so they track the background on resize.
-// Avoid zones keep flowers away from houses and the Korean title text.
-const FLOWER_AVOID: { x1: number; y1: number; x2: number; y2: number }[] = [
-  { x1: 155, y1:  35, x2: 770, y2: 155 }, // Korean title text
-  { x1: 165, y1: 155, x2: 315, y2: 390 }, // house-1 (top-left)
-  { x1: 440, y1: 155, x2: 580, y2: 390 }, // house-2 (top-center)
-  { x1: 710, y1: 155, x2: 850, y2: 390 }, // house-4 (top-right)
-  { x1: 300, y1: 400, x2: 445, y2: 575 }, // house-5 (bottom-left)
-  { x1: 530, y1: 400, x2: 675, y2: 575 }, // house-3 (bottom-right)
-];
-
+// Fixed positions in image-space (BG_W×BG_H = 1100×900).
+// Placed near the title text, around each house, and in empty corner/edge areas.
 type FlowerDef = { id: number; imgX: number; imgY: number; delay: number };
 type ScreenFlower = FlowerDef & { x: number; y: number; size: number };
 
-function generateFlowers(count: number): FlowerDef[] {
-  const FW = 16;
-  const flowers: FlowerDef[] = [];
-  let attempts = 0;
-  while (flowers.length < count && attempts < 3000) {
-    attempts++;
-    const x = Math.random() * (BG_W - FW);
-    const y = Math.random() * (BG_H - FW);
-    const blocked = FLOWER_AVOID.some(
-      z => x < z.x2 && x + FW > z.x1 && y < z.y2 && y + FW > z.y1
-    );
-    if (!blocked) flowers.push({ id: flowers.length, imgX: x, imgY: y, delay: Math.random() * 0.65 });
-  }
-  return flowers;
-}
+const FLOWER_DEFS: FlowerDef[] = [
+  // ── Near title text (left side, y≈35–155 is the text band) ──
+  { id:  0, imgX:  88, imgY:  65, delay: 0.10 },
+  { id:  1, imgX: 108, imgY:  98, delay: 0.35 },
+  { id:  2, imgX:  92, imgY: 130, delay: 0.55 },
+  { id:  3, imgX: 125, imgY:  80, delay: 0.20 },
+  // ── Scatter below left-title flowers ──
+  { id: 53, imgX:  18, imgY: 162, delay: 0.20 },
+  { id: 54, imgX:  45, imgY: 158, delay: 0.45 },
+  { id: 55, imgX:  72, imgY: 165, delay: 0.10 },
+  { id: 56, imgX: 100, imgY: 160, delay: 0.55 },
+  { id: 57, imgX: 128, imgY: 163, delay: 0.30 },
+  { id: 58, imgX: 152, imgY: 158, delay: 0.15 },
+  { id: 59, imgX:  392, imgY: 125, delay: 0.20 },
+  { id: 60, imgX:  422, imgY: 135, delay: 0.45 },
+  { id: 61, imgX:  452, imgY: 145, delay: 0.10 },
+  { id: 62, imgX: 472, imgY: 158, delay: 0.55 },
+  { id: 63, imgX: 500, imgY: 190, delay: 0.30 },
+  { id: 64, imgX: 520, imgY: 149, delay: 0.15 },
+  { id: 65, imgX:  192, imgY: 125, delay: 0.20 },
+  { id: 66, imgX:  222, imgY: 135, delay: 0.45 },
+  { id: 67, imgX:  252, imgY: 145, delay: 0.10 },
+  { id: 68, imgX: 272, imgY: 158, delay: 0.55 },
+  // ── Near title text (right side) ──
+  { id:  4, imgX: 792, imgY:  48, delay: 0.40 },
+  { id:  5, imgX: 822, imgY:  78, delay: 0.15 },
+  { id:  6, imgX: 852, imgY:  52, delay: 0.60 },
+  { id:  7, imgX: 872, imgY: 108, delay: 0.30 },
+  // ── Around house-1 (imgX:200 imgY:305 imgW:80 imgH:60) ──
+  { id:  8, imgX: 108, imgY: 318, delay: 0.10 },
+  { id:  9, imgX: 122, imgY: 355, delay: 0.45 },
+  { id: 10, imgX: 332, imgY: 312, delay: 0.25 },
+  { id: 11, imgX: 348, imgY: 350, delay: 0.55 },
+  // ── Around house-2 (imgX:478 imgY:305 imgW:65 imgH:60) ──
+  { id: 12, imgX: 408, imgY: 318, delay: 0.30 },
+  { id: 13, imgX: 418, imgY: 355, delay: 0.10 },
+  { id: 14, imgX: 598, imgY: 312, delay: 0.50 },
+  { id: 15, imgX: 612, imgY: 348, delay: 0.20 },
+  // ── Around house-4 (imgX:740 imgY:300 imgW:80 imgH:65) ──
+  { id: 16, imgX: 668, imgY: 312, delay: 0.35 },
+  { id: 17, imgX: 672, imgY: 348, delay: 0.60 },
+  { id: 18, imgX: 878, imgY: 305, delay: 0.15 },
+  { id: 19, imgX: 888, imgY: 342, delay: 0.40 },
+  // ── Around house-5 (imgX:333 imgY:488 imgW:80 imgH:60) ──
+  { id: 20, imgX: 248, imgY: 495, delay: 0.25 },
+  { id: 21, imgX: 258, imgY: 530, delay: 0.55 },
+  { id: 22, imgX: 465, imgY: 495, delay: 0.10 },
+  { id: 23, imgX: 472, imgY: 530, delay: 0.40 },
+  // ── Around house-3 (imgX:572 imgY:490 imgW:65 imgH:58) ──
+  { id: 24, imgX: 495, imgY: 500, delay: 0.30 },
+  { id: 25, imgX: 490, imgY: 535, delay: 0.60 },
+  { id: 26, imgX: 695, imgY: 500, delay: 0.20 },
+  { id: 27, imgX: 705, imgY: 535, delay: 0.45 },
+  // ── Top-left corner cluster ──
+  { id: 28, imgX:  22, imgY:  22, delay: 0.30 },
+  { id: 29, imgX:  48, imgY:  14, delay: 0.10 },
+  { id: 30, imgX:  38, imgY:  55, delay: 0.50 },
+  { id: 31, imgX:  68, imgY:  32, delay: 0.20 },
+  // ── Top-right corner cluster (below Spotify player) ──
+  { id: 32, imgX: 1012, imgY: 250, delay: 0.40 },
+  { id: 33, imgX: 1042, imgY: 275, delay: 0.15 },
+  { id: 34, imgX: 1028, imgY: 300, delay: 0.58 },
+  { id: 35, imgX: 1068, imgY: 262, delay: 0.35 },
+  // ── Bottom-center empty cluster ──
+  { id: 36, imgX: 472, imgY: 682, delay: 0.20 },
+  { id: 37, imgX: 502, imgY: 712, delay: 0.45 },
+  { id: 38, imgX: 538, imgY: 692, delay: 0.10 },
+  { id: 39, imgX: 482, imgY: 742, delay: 0.60 },
+  { id: 40, imgX: 562, imgY: 728, delay: 0.30 },
+  // ── Left-edge mid cluster ──
+  { id: 41, imgX:  22, imgY: 462, delay: 0.15 },
+  { id: 42, imgX:  48, imgY: 498, delay: 0.40 },
+  { id: 43, imgX:  28, imgY: 538, delay: 0.25 },
+  // ── Right-edge mid cluster ──
+  { id: 44, imgX: 1012, imgY: 458, delay: 0.50 },
+  { id: 45, imgX: 1042, imgY: 492, delay: 0.10 },
+  { id: 46, imgX: 1022, imgY: 532, delay: 0.40 },
+  // ── Bottom-left cluster ──
+  { id: 47, imgX:  28, imgY: 732, delay: 0.35 },
+  { id: 48, imgX:  55, imgY: 762, delay: 0.15 },
+  { id: 49, imgX:  38, imgY: 802, delay: 0.55 },
+  // ── Bottom-right cluster ──
+  { id: 50, imgX: 1012, imgY: 732, delay: 0.20 },
+  { id: 51, imgX: 1042, imgY: 762, delay: 0.45 },
+  { id: 52, imgX: 1028, imgY: 802, delay: 0.10 },
+];
 
 function toScreenFlowers(defs: FlowerDef[], vpW: number, vpH: number): ScreenFlower[] {
   const scale   = Math.max(vpW / BG_W, vpH / BG_H);
   const offsetX = (vpW - BG_W * scale) / 2;
   const offsetY = (vpH - BG_H * scale) / 2;
-  return defs.map(d => ({
-    ...d,
-    x:    d.imgX * scale + offsetX,
-    y:    d.imgY * scale + offsetY,
-    size: 16 * scale,
-  }));
+  const size    = 30 * scale;
+  return defs
+    .map(d => ({
+      ...d,
+      x:    d.imgX * scale + offsetX,
+      y:    d.imgY * scale + offsetY,
+      size,
+    }))
+    // drop flowers whose bounding box falls entirely outside the viewport
+    .filter(f => f.x + f.size > 0 && f.x < vpW && f.y + f.size > 0 && f.y < vpH);
 }
 
 // ─── Cover math ───────────────────────────────────────────────────────────────
@@ -177,6 +243,9 @@ const MovableCharacter = ({ hotspots, onEnterHotspot }: MovableCharacterProps) =
       if (moving) {
         pos.current.x += dx;
         pos.current.y += dy;
+        // Keep sprite within the viewport
+        pos.current.x = Math.max(0, Math.min(window.innerWidth  - CHAR_W, pos.current.x));
+        pos.current.y = Math.max(0, Math.min(window.innerHeight - CHAR_H, pos.current.y));
         if (++frameTick.current >= TICKS_PER_FRAME) {
           frameTick.current = 0;
           frame.current = (frame.current + 1) % COLS;
@@ -246,17 +315,13 @@ export default function Home() {
   // Screen-space hotspots — recomputed on resize
   const [hotspots, setHotspots] = useState<ScreenHotspot[]>([]);
 
-  // Flowers — positions generated once, screen coords recomputed on resize
-  const flowerDefs = useRef<FlowerDef[]>([]);
   const [screenFlowers, setScreenFlowers] = useState<ScreenFlower[]>([]);
 
   useEffect(() => {
-    flowerDefs.current = generateFlowers(30);
-
     const update = () => {
       const vw = window.innerWidth, vh = window.innerHeight;
       setHotspots(toScreenHotspots(HOTSPOT_DEFS, vw, vh));
-      setScreenFlowers(toScreenFlowers(flowerDefs.current, vw, vh));
+      setScreenFlowers(toScreenFlowers(FLOWER_DEFS, vw, vh));
     };
     update();
     window.addEventListener('resize', update);
