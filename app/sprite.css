@@ -1,0 +1,26 @@
+.flower {
+  position: absolute;
+  background-image: url('/movingflower.png');
+  background-repeat: no-repeat;
+  background-size: 200% 100%; /* sprite is 2 frames wide relative to the element */
+  background-position: 0% 0%;
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation: flower-anim 0.7s steps(2) infinite;
+}
+
+@keyframes flower-anim {
+  from { background-position-x: 0%; }
+  to   { background-position-x: 200%; } /* steps(2) lands at 0% and 100% */
+}
+
+.character {
+  position: absolute;
+  width: 49px;            /* 32px frame × 3 scale */
+  height: 96px;
+  background-image: url('/pixelwalk.png');
+  background-repeat: no-repeat;
+  background-size: 192px 384px; /* 64×3 wide, 128×3 tall */
+  image-rendering: pixelated;
+  background-position: 0px 0px;
+}
